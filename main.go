@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/jcocozza/vssr/internal"
@@ -18,6 +17,6 @@ func main() {
     }
 
 
-    fmt.Println("searching for: " + *pattern + " in " + *path)
+    //fmt.Println("searching for: " + *pattern + " in " + *path)
     internal.Searcher(*path, *pattern)
 }
