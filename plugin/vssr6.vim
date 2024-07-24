@@ -51,7 +51,8 @@ function! ParseLine(ln)
     if len(l:parts) >= 2
         let l:file = l:parts[0]
         let l:line = l:parts[1]
-        let l:file_content = join(readfile(l:file), "\n")
+        " let l:file_content = join(readfile(l:file), "\n")
+        let l:file_content = readfile(l:file)
         return l:file_content
     endif
     return ["unable to read file content"]
