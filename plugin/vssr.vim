@@ -1,87 +1,181 @@
-let s:popup_id = 0
-let s:preview_popup_id = 0
-let s:menu_items = ["foo"]
-let s:results = []
+" Define global variables to store popup IDs and buffer numbers
+let g:popup_winids = {}
+let g:popup_bufnrs = {}
+let g:search_results = []
+let g:search_loc = 0
 
-func! AddItem(item)
-    call add(s:menu_items, a:item)
-endfunc
+" height/width params
+let g:total_length = &columns
+let g:total_height = &lines
 
-func! MenuCallBack(id, result)
-    if a:result == -1
-        return
-    endif
-    let l:fileStr = s:menu_items[a:result]
+let g:max_search_results = 30
+let g:max_search_results_width = float2nr(g:total_length / 2)
 
-    let l:text_popup_id = popup_dialog(l:fileStr, #{
-                \ line: 25,
-                \ col: 100,
-                \})
-endfunc
+let g:max_file_viewer_height = g:total_height - 10
+let g:max_file_viewer_width = float2nr(g:total_length / 2)
 
-func! PreviewItem(id, key)
-    let l:selected = popup_getpos(a:id).firstline - 1
-    let l:fileStr = s:menu_items[l:selected]
-
-    if s:preview_popup_id != 0
-        call popup_close(s:preview_popup_id)
-    endif
-
-    if s:preview_popup_id == 0
-        let s:preview_popup_id = popup_create(l:fileStr, #{
-            \ line: 'cursor+1',
-            \ col: 'cursor+1',
-            \ moved: 'any',
-            \ wrap: 0,
-            \ padding: [0,1,0,1],
-            \ border: [],
-            \ close: 'none',
-        \})
-    else
-        call popup_settext(s:preview_popup_id, l:fileStr)
-    endif
-
-    call win_execute(a:id, "")
-
-    return 0
-endfunc
-
-func! ProcessInput(pattern)
+function! CallVssr(pattern)
     let l:command = '/Users/josephcocozza/Repositories/vssr/vssr --pattern ' . shellescape(a:pattern)
     echo '\nRunning command: ' . l:command
     let l:results = systemlist(l:command)
-
     if v:shell_error
         echohl ErrorMsg
         echom 'Error running vssr: ' . v:shell_error
         echohl None
         return
     endif
-    call extend(s:menu_items, l:results)
-endfunc
-
-function! Search()
-    let s:user_search = input("vssr > ")
-    call ProcessInput(s:user_search)
-
-    let s:popup_id = popup_menu(s:menu_items, #{
-        \ title: "vssr",
-        \ callback: 'MenuCallBack',
-        \ line: 25,
-        \ col: 60,
-        \ highlight: 'Question',
-        \ border: [],
-        \ close: 'click',
-        \ padding: [1,20,1,1],
-        \ filter: 'PreviewItem',
-        \ })
-
-    " \ filter: 'MenuCallBack',
-    " Apply syntax highlighting to the popup
-    call win_execute(s:popup_id, 'syntax region vssrMatch matchgroup=vssrMatchHidden start="<match>" end="</match>" concealends')
-    call win_execute(s:popup_id, 'highlight vssrMatch ctermfg=Red guifg=Red')
-    call win_execute(s:popup_id, 'highlight vssrMatchHidden ctermfg=NONE guifg=NONE')
-    call win_execute(s:popup_id, 'setlocal conceallevel=2')
+    return l:results
 endfunction
 
-command! Vssr call Search()
+function! OpenFileViewer()
+    " Create the popup window for the file content
+    let l:content_options = {
+        \ 'pos': 'topleft',
+        \ 'line': 0,
+        \ 'col': g:max_search_results_width,
+        \ 'maxwidth': g:max_file_viewer_width,
+        \ 'minwidth': g:max_file_viewer_width,
+        \ 'minheight': g:max_file_viewer_height,
+        \ 'maxheight': g:max_file_viewer_height,
+        \ 'title': 'File Content',
+        \ 'border': [],
+        \ 'padding': [0,1,0,1],
+        \ 'mapping': 0,
+        \ }
+
+    let l:content = ['No content available']
+    " Create the file content popup
+    let g:popup_winids['content'] = popup_create(l:content, l:content_options)
+    let g:popup_bufnrs['content'] = winbufnr(g:popup_winids['content'])
+endfunction
+
+function! ParseLine(ln)
+    " should be of the form path/to/file:ln_#: line_text
+    let l:parts = split(a:ln, ':')
+    if len(l:parts) >= 2
+        let l:file = l:parts[0]
+        let l:line = l:parts[1]
+        " let l:file_content = join(readfile(l:file), "\n")
+        let l:file_content = readfile(l:file)
+        return l:file_content
+    endif
+    return ["unable to read file content"]
+endfunction
+
+function! GetFileLine(ln)
+    " should be of the form path/to/file:ln_#: line_text
+    let l:parts = split(a:ln, ':')
+    if len(l:parts) >= 2
+        let l:file = l:parts[0]
+        let l:line = l:parts[1]
+        return [l:file, l:line]
+    endif
+endfunction
+
+function! Sfvc(winid, item)
+    let l:content_winid = g:popup_winids['content']
+    let l:info = g:search_results[a:item - 1]
+    let l:content = ParseLine(info)
+    call popup_settext(l:content_winid, l:content)
+endfunction
+
+function! ChangeFileContent(winid, key)
+    if a:key == "\<CR>" || a:key == "\<Esc>"
+        return 0
+    endif
+
+    let l:max = len(g:search_results)
+    if (a:key == 'j' || a:key == '\<Down>' || a:key == '<C-N>')
+        let g:search_loc = (g:search_loc + 1) % l:max
+    endif
+    if (a:key == 'k' || a:key == '\<Up>' || a:key == '<C-P>')
+        let g:search_loc = (g:search_loc - 1) % l:max
+    endif
+
+    let l:result = popup_filter_menu(a:winid, a:key)
+    let l:content_winid = g:popup_winids['content']
+    let l:info = g:search_results[g:search_loc]
+
+    let l:file_line = GetFileLine(info)
+    let l:filepath = file_line[0]
+    let l:line_num = file_line[1]
+    call CenterAroundLine(filepath, line_num)
+    " let l:content = ParseLine(info)
+    " call popup_settext(l:content_winid, l:content)
+    return l:result
+endfunction
+
+function! CenterAroundLine(file, line_number)
+    " read file content
+    let l:content = readfile(a:file)
+
+    " lines around target line
+    let l:ctx_range = float2nr(g:max_file_viewer_height / 2)
+    let l:start = max([0, a:line_number - ctx_range])
+    let l:end = min([len(l:content) - 1, a:line_number + ctx_range])
+
+    let l:display_content = l:content[l:start:l:end]
+
+    " Highlight the target line
+    let l:highlighted_content = []
+    for l:i in range(len(l:display_content))
+        if l:i + 1 == a:line_number - l:start
+            call add(l:highlighted_content, '<match>'.l:display_content[l:i].'</match>')
+        else
+            call add(l:highlighted_content, l:display_content[l:i])
+        endif
+    endfor
+    let l:content_winid = g:popup_winids['content']
+    call popup_settext(l:content_winid, l:highlighted_content)
+    call win_execute(l:content_winid, 'syntax region vssrMatch matchgroup=vssrMatchHidden start="<match>" end="</match>" concealends')
+    call win_execute(l:content_winid, 'highlight vssrMatch ctermfg=Red guifg=Red')
+    call win_execute(l:content_winid, 'highlight vssrMatchHidden ctermfg=NONE guifg=NONE')
+    call win_execute(l:content_winid, 'setlocal conceallevel=2')
+endfunction
+
+function! Open()
+    let l:user_search = input("vssr > ")
+    let g:search_results = CallVssr(l:user_search)
+
+    " Create the popup window for the file list
+    let l:list_width = float2nr(&columns * 0.35)
+    let l:popup_height = float2nr(&lines * 0.8)
+    let l:popup_col = 0  " float2nr((&columns - l:list_width) / 2)
+    let l:popup_row = float2nr((&lines - l:popup_height) / 2)
+    let l:list_options = {
+    \ 'pos': 'topleft',
+    \ 'line': 0,
+    \ 'col': -1,
+    \ 'maxheight': g:max_search_results,
+    \ 'minheight': g:max_search_results,
+    \ 'maxwidth': g:max_search_results_width - 10,
+    \ 'minwidth': g:max_search_results_width - 10,
+    \ 'title': 'VSSR Files',
+    \ 'border': [],
+    \ 'padding': [0,1,0,1],
+    \ 'cursorline': 1,
+    \ 'callback': 'Sfvc',
+    \ 'mapping': 0,
+    \ 'filter': 'ChangeFileContent',
+    \ }
+
+    " Create the file list popup
+    let g:popup_winids['list'] = popup_menu(g:search_results, l:list_options)
+    let g:popup_bufnrs['list'] = winbufnr(g:popup_winids['list'])
+
+    " Set up syntax highlighting for matches in the list popup
+    call win_execute(g:popup_winids['list'], 'syntax region vssrMatch matchgroup=vssrMatchHidden start="<match>" end="</match>" concealends')
+    call win_execute(g:popup_winids['list'], 'highlight vssrMatch ctermfg=Red guifg=Red')
+    call win_execute(g:popup_winids['list'], 'highlight vssrMatchHidden ctermfg=NONE guifg=NONE')
+    call win_execute(g:popup_winids['list'], 'setlocal conceallevel=2')
+
+    call OpenFileViewer()
+
+    if len(g:search_results) > 0
+        call Sfvc(g:popup_winids['list'], 1)
+        let g:search_loc = 0
+    endif
+endfunction
+
+command! Vssr call Open()
+
