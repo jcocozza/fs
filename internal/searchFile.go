@@ -2,16 +2,18 @@ package internal
 
 import (
 	"bufio"
+	"strings"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sync"
 )
-
 const (
 	Red = "\033[31m"
 	Reset = "\033[0m"
+
+	contextWindow = 100
 )
 
 func searchFile(path, search string, wg *sync.WaitGroup, results chan<- string) {
@@ -29,21 +31,34 @@ func searchFile(path, search string, wg *sync.WaitGroup, results chan<- string) 
 		return
 	}
 
-	scanner := bufio.NewScanner(file)
 	re := regexp.MustCompile(search)
 	ln := 1
 
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if re.Match(line) {
-			highlighted := re.ReplaceAllString(string(line), "<match>" + "$0" + "</match>")
-			results <- fmt.Sprintf("%s:%d: %s\n", path, ln, highlighted)
+	reader := bufio.NewReader(file)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return
+		}
+		if re.MatchString(line) {
+			// Find the matched substring
+            match := re.FindStringSubmatch(line)[0]
+            idx := strings.Index(line, match)
+			start := max(0, idx - int(contextWindow / 2))
+			end := min(idx + int(contextWindow / 2), len(line))
+
+            // Create the trimmed line
+            trimmedLine := line[start:end]
+
+            // Highlight the matched substring in the trimmed line
+            highlighted := re.ReplaceAllString(trimmedLine, "<match>$0</match>")
+			if strings.HasSuffix(trimmedLine, "\n") {
+				results <- fmt.Sprintf("%s:%d: %s", path, ln, highlighted)
+			} else {
+				results <- fmt.Sprintf("%s:%d: %s\n", path, ln, highlighted)
+			}
 		}
 		ln++
-	}
-
-	if err := scanner.Err(); err != nil {
-		results <- fmt.Sprintf("Error reading file %s: %v", path, err)
 	}
 }
 
