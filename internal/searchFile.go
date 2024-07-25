@@ -2,15 +2,16 @@ package internal
 
 import (
 	"bufio"
-	"strings"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 )
+
 const (
-	Red = "\033[31m"
+	Red   = "\033[31m"
 	Reset = "\033[0m"
 
 	contextWindow = 100
@@ -42,16 +43,16 @@ func searchFile(path, search string, wg *sync.WaitGroup, results chan<- string) 
 		}
 		if re.MatchString(line) {
 			// Find the matched substring
-            match := re.FindStringSubmatch(line)[0]
-            idx := strings.Index(line, match)
-			start := max(0, idx - int(contextWindow / 2))
-			end := min(idx + int(contextWindow / 2), len(line))
+			match := re.FindStringSubmatch(line)[0]
+			idx := strings.Index(line, match)
+			start := max(0, idx-int(contextWindow/2))
+			end := min(idx+int(contextWindow/2), len(line))
 
-            // Create the trimmed line
-            trimmedLine := line[start:end]
+			// Create the trimmed line
+			trimmedLine := line[start:end]
 
-            // Highlight the matched substring in the trimmed line
-            highlighted := re.ReplaceAllString(trimmedLine, "<match>$0</match>")
+			// Highlight the matched substring in the trimmed line
+			highlighted := re.ReplaceAllString(trimmedLine, "<match>$0</match>")
 			if strings.HasSuffix(trimmedLine, "\n") {
 				results <- fmt.Sprintf("%s:%d: %s", path, ln, highlighted)
 			} else {

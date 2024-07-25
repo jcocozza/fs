@@ -27,6 +27,35 @@ function! CallVssr(pattern)
     return l:results
 endfunction
 
+function! OnVssrStdout(channel, msg)
+    echo "stdout called " . a:msg
+    if !empty(a:msg)
+        call add(g:search_results, a:msg)
+        call popup_settext(g:popup_winids['list'], g:search_results)
+    endif
+endfunction
+
+function! HandleError(channel, msg)
+    echohl ErrorMsg
+    echo "Error: " . a:msg
+    echohl None
+endfunction
+
+function! HandleExit(job, status)
+    "echo 'job exited with status: ' . a:status
+endfunction
+
+function! StartVssrAsync(pattern)
+    let l:cmd = ['/Users/josephcocozza/Repositories/vssr/vssr', '--pattern=' . a:pattern, '--path=' . getcwd()]
+    echo 'command: ' . join(l:cmd, ' ')
+    let l:job_id = job_start(l:cmd, {
+        \ 'err_cb': function('HandleError'),
+        \ 'exit_cb': function('HandleExit'),
+        \ 'out_cb': function('OnVssrStdout'),
+        \ })
+    " echo 'job status: ' . job_status(l:job_id)
+endfunction
+
 function! OpenFileViewer()
     " Create the popup window for the file content
     let l:content_options = {
@@ -83,8 +112,11 @@ function! Sfvc(winid, item)
     " call OpenFile(filepath)
 endfunction
 
-function! ChangeFileContent(winid, key)
+function! Ignore()
     echo "Key pressed: " . a:key . " (ASCII: " . printf("%d", char2nr(a:key)) . ")"
+endfunction
+
+function! ChangeFileContent(winid, key)
     if a:key == "\<Esc>"
         call CloseAll()
         return 0
@@ -108,12 +140,15 @@ function! ChangeFileContent(winid, key)
 
     let l:result = popup_filter_menu(a:winid, a:key)
     let l:content_winid = g:popup_winids['content']
-    let l:info = g:search_results[g:search_loc]
-
-    let l:file_line = GetFileLine(info)
-    let l:filepath = file_line[0]
-    let l:line_num = file_line[1]
-    call CenterAroundLine(filepath, line_num)
+    if len(g:search_results) > 0
+        let l:info = g:search_results[g:search_loc]
+        if len(info) != 0
+            let l:file_line = GetFileLine(info)
+            let l:filepath = file_line[0]
+            let l:line_num = file_line[1]
+            call CenterAroundLine(filepath, line_num)
+        endif
+    endif
     " let l:content = ParseLine(info)
     " call popup_settext(l:content_winid, l:content)
     return l:result
@@ -148,9 +183,6 @@ function! CenterAroundLine(file, line_number)
 endfunction
 
 function! Open()
-    let l:user_search = input("vssr > ")
-    let g:search_results = CallVssr(l:user_search)
-
     " Create the popup window for the file list
     let l:list_width = float2nr(&columns * 0.35)
     let l:popup_height = float2nr(&lines * 0.8)
@@ -196,5 +228,10 @@ function! CloseAll()
    call popup_close(g:popup_winids['list'])
 endfunction
 
-command! Vssr call Open()
+function! Main()
+    let l:user_search = input("vssr > ")
+    call Open()
+    call StartVssrAsync(l:user_search)
+endfunction
 
+command! Vssr call Main()
