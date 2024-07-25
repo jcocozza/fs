@@ -9,7 +9,7 @@ const (
 	readSize = 512
 )
 
-
+// this is basically copied directly from:  https://github.com/ggreer/the_silver_searcher/blob/a61f1780b64266587e7bc30f0f5f71c6cca97c0f/src/util.c#L333
 // isBinary determines if the given buffer is binary data or text.
 func isBinary(buf []byte) bool {
 	bufLen := len(buf)

@@ -72,23 +72,37 @@ function! GetFileLine(ln)
     endif
 endfunction
 
+function! OpenFile(path)
+    execute 'edit ' . a:path
+endfunction
+
 function! Sfvc(winid, item)
-    let l:content_winid = g:popup_winids['content']
-    let l:info = g:search_results[a:item - 1]
-    let l:content = ParseLine(info)
-    call popup_settext(l:content_winid, l:content)
+    " let l:info = g:search_results[g:search_loc]
+    " let l:fileline = GetFileLine(info)
+    " let l:filepath = l:fileline[0]
+    " call OpenFile(filepath)
 endfunction
 
 function! ChangeFileContent(winid, key)
-    if a:key == "\<CR>" || a:key == "\<Esc>"
+    echo "Key pressed: " . a:key . " (ASCII: " . printf("%d", char2nr(a:key)) . ")"
+    if a:key == "\<Esc>"
+        call CloseAll()
         return 0
     endif
 
+    if a:key == "\<CR>"
+        let l:info = g:search_results[g:search_loc]
+        let l:fileline = GetFileLine(info)
+        let l:filepath = l:fileline[0]
+        call CloseAll()
+        call OpenFile(filepath)
+    endif
+
     let l:max = len(g:search_results)
-    if (a:key == 'j' || a:key == '\<Down>' || a:key == '<C-N>')
+    if (a:key == 'j' || a:key == "\<Down>" || a:key == '<C-N>')
         let g:search_loc = (g:search_loc + 1) % l:max
     endif
-    if (a:key == 'k' || a:key == '\<Up>' || a:key == '<C-P>')
+    if (a:key == 'k' || a:key == "\<Up>" || a:key == '<C-P>')
         let g:search_loc = (g:search_loc - 1) % l:max
     endif
 
@@ -154,11 +168,12 @@ function! Open()
     \ 'border': [],
     \ 'padding': [0,1,0,1],
     \ 'cursorline': 1,
-    \ 'callback': 'Sfvc',
     \ 'mapping': 0,
     \ 'filter': 'ChangeFileContent',
+    \ 'callback': 'Sfvc',
     \ }
 
+    " \ 'callback': 'Sfvc',
     " Create the file list popup
     let g:popup_winids['list'] = popup_menu(g:search_results, l:list_options)
     let g:popup_bufnrs['list'] = winbufnr(g:popup_winids['list'])
@@ -172,9 +187,13 @@ function! Open()
     call OpenFileViewer()
 
     if len(g:search_results) > 0
-        call Sfvc(g:popup_winids['list'], 1)
         let g:search_loc = 0
     endif
+endfunction
+
+function! CloseAll()
+   call popup_close(g:popup_winids['content'])
+   call popup_close(g:popup_winids['list'])
 endfunction
 
 command! Vssr call Open()
