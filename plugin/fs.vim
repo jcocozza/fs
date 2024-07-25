@@ -15,12 +15,12 @@ let g:max_file_viewer_height = g:total_height - 10
 let g:max_file_viewer_width = float2nr(g:total_length / 2)
 
 function! CallVssr(pattern)
-    let l:command = '/Users/josephcocozza/Repositories/vssr/vssr --pattern ' . shellescape(a:pattern)
+    let l:command = '/Users/josephcocozza/Repositories/fs/fs --pattern ' . shellescape(a:pattern)
     echo '\nRunning command: ' . l:command
     let l:results = systemlist(l:command)
     if v:shell_error
         echohl ErrorMsg
-        echom 'Error running vssr: ' . v:shell_error
+        echom 'Error running fs: ' . v:shell_error
         echohl None
         return
     endif
@@ -46,7 +46,7 @@ function! HandleExit(job, status)
 endfunction
 
 function! StartVssrAsync(pattern)
-    let l:cmd = ['/Users/josephcocozza/Repositories/vssr/vssr', '--pattern=' . a:pattern, '--path=' . getcwd()]
+    let l:cmd = ['/Users/josephcocozza/Repositories/fs/fs', '--pattern=' . a:pattern, '--path=' . getcwd()]
     echo 'command: ' . join(l:cmd, ' ')
     let l:job_id = job_start(l:cmd, {
         \ 'err_cb': function('HandleError'),
@@ -229,9 +229,9 @@ function! CloseAll()
 endfunction
 
 function! Main()
-    let l:user_search = input("vssr > ")
+    let l:user_search = input("fs > ")
     call Open()
     call StartVssrAsync(l:user_search)
 endfunction
 
-command! Vssr call Main()
+command! Fs call Main()

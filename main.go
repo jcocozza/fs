@@ -4,7 +4,7 @@ import (
 	"flag"
 	"os"
 
-	"github.com/jcocozza/vssr/internal"
+	"github.com/jcocozza/fs/internal"
 )
 
 func main() {
