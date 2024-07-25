@@ -21,6 +21,14 @@ func searchFile(path, search string, wg *sync.WaitGroup, results chan<- string) 
 		return
 	}
 
+	b, err := checkFileBinary(path)
+	if err != nil {
+		panic(err)
+	}
+	if b {
+		return
+	}
+
 	scanner := bufio.NewScanner(file)
 	re := regexp.MustCompile(search)
 	ln := 1
@@ -28,10 +36,8 @@ func searchFile(path, search string, wg *sync.WaitGroup, results chan<- string) 
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if re.Match(line) {
-			//highlighted := re.ReplaceAllString(string(line), Red + "$0" + Reset)
 			highlighted := re.ReplaceAllString(string(line), "<match>" + "$0" + "</match>")
 			results <- fmt.Sprintf("%s:%d: %s\n", path, ln, highlighted)
-			//results <- fmt.Sprintf("%s:%d: %s\n", path, ln, line)
 		}
 		ln++
 	}
@@ -58,16 +64,9 @@ func Searcher(searchDir, search string) int {
 			return nil
 		}
 		if !info.IsDir() {
-			b, err := isBinary(path)
-			if err != nil {
-				fmt.Println(err.Error())
-				return nil
-			}
-			if !b {
-				wg.Add(1)
-				go searchFile(path, search, &wg, results)
-				fileCnt++
-			}
+			wg.Add(1)
+			go searchFile(path, search, &wg, results)
+			fileCnt++
 		}
 		return nil
 	})
