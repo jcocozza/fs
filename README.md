@@ -1,4 +1,4 @@
-#Fs
+# Fs
 
 Fs is a text file search tool. It searches for regex pattern matches in the directory and subdirectories that it is told to.
 By default is will start searching in the directory it is located in.
