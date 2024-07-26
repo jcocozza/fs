@@ -1,8 +1,8 @@
 package internal
 
 import (
-	"os"
 	"bytes"
+	"os"
 )
 
 const (
@@ -59,7 +59,7 @@ func isBinary(buf []byte) bool {
 			}
 		}
 	}
-	return (suspiciousBytes*100) / totalBytes > 10
+	return (suspiciousBytes*100)/totalBytes > 10
 }
 
 // checkFileBinary checks if the file at the given path is binary.

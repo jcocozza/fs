@@ -17,7 +17,14 @@ const (
 	contextWindow = 100
 )
 
-func searchFile(path, search string, wg *sync.WaitGroup, results chan<- string) {
+type SearchConfig struct {
+	VersionControl       bool
+	VersionControlIgnore bool
+	Common				 bool
+	IncludeMatchTags     bool
+}
+
+func searchFile(path, search string, includeMatchTags bool, wg *sync.WaitGroup, results chan<- string) {
 	defer wg.Done()
 	file, err := os.Open(path)
 	if err != nil {
@@ -51,19 +58,25 @@ func searchFile(path, search string, wg *sync.WaitGroup, results chan<- string) 
 			// Create the trimmed line
 			trimmedLine := line[start:end]
 
-			// Highlight the matched substring in the trimmed line
-			highlighted := re.ReplaceAllString(trimmedLine, "<match>$0</match>")
+			if includeMatchTags {
+				// Highlight the matched substring in the trimmed line
+				trimmedLine = re.ReplaceAllString(trimmedLine, "<match>$0</match>")
+			}
 			if strings.HasSuffix(trimmedLine, "\n") {
-				results <- fmt.Sprintf("%s:%d: %s", path, ln, highlighted)
+				results <- fmt.Sprintf("%s:%d: %s", path, ln, trimmedLine)
 			} else {
-				results <- fmt.Sprintf("%s:%d: %s\n", path, ln, highlighted)
+				results <- fmt.Sprintf("%s:%d: %s\n", path, ln, trimmedLine)
 			}
 		}
 		ln++
 	}
 }
 
-func Searcher(searchDir, search string) int {
+func Searcher(searchDir, search string, cfg SearchConfig) int {
+	ig, err := ReadIgnoreFiles(searchDir, cfg.VersionControl, cfg.VersionControlIgnore, cfg.Common)
+	if err != nil {
+		panic(err)
+	}
 	var wg sync.WaitGroup
 	results := make(chan string)
 
@@ -74,15 +87,23 @@ func Searcher(searchDir, search string) int {
 	}()
 
 	var fileCnt int
-	filepath.Walk(searchDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(searchDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Println(err.Error())
 			return nil
 		}
+
 		if !info.IsDir() {
+			if ig.Isin(path) {
+				return nil
+			}
 			wg.Add(1)
-			go searchFile(path, search, &wg, results)
+			go searchFile(path, search, cfg.IncludeMatchTags, &wg, results)
 			fileCnt++
+		} else {
+			if ig.Isin(path) {
+				return filepath.SkipDir
+			}
 		}
 		return nil
 	})
