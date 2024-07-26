@@ -1,0 +1,17 @@
+*fs* - text file search tool
+
+== Installation
+" Installation instructions go here
+" TODO
+
+== Usage
+" Usage instructions go here
+" TODO
+
+== Commands
+:Fs - search through files
+
+== License
+" License information goes here
+" TODO
+

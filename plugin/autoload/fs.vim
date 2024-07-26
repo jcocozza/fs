@@ -14,6 +14,15 @@ let g:max_search_results_width = float2nr(g:total_length / 2)
 let g:max_file_viewer_height = g:total_height - 10
 let g:max_file_viewer_width = float2nr(g:total_length / 2)
 
+function! CheckFs()
+    if !executable('fs')
+        echo "fs not found"
+        return 0
+    endif
+    return 1
+endfunction
+
+" not used
 function! CallVssr(pattern)
     let l:command = '/Users/josephcocozza/Repositories/fs/fs --pattern ' . shellescape(a:pattern)
     echo '\nRunning command: ' . l:command
@@ -46,7 +55,7 @@ function! HandleExit(job, status)
 endfunction
 
 function! StartVssrAsync(pattern)
-    let l:cmd = ['/Users/josephcocozza/Repositories/fs/fs', '--pattern=' . a:pattern, '--path=' . getcwd()]
+    let l:cmd = ['fs', '--pattern=' . a:pattern, '--path=' . getcwd()]
     echo 'command: ' . join(l:cmd, ' ')
     let l:job_id = job_start(l:cmd, {
         \ 'err_cb': function('HandleError'),
@@ -228,10 +237,14 @@ function! CloseAll()
    call popup_close(g:popup_winids['list'])
 endfunction
 
-function! Main()
+function! fs#Main()
+    let l:exists = CheckFs()
+    if l:exists == 0
+        return
+    endif
+
     let l:user_search = input("fs > ")
     call Open()
     call StartVssrAsync(l:user_search)
 endfunction
 
-command! Fs call Main()
