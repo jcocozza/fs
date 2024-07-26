@@ -27,8 +27,10 @@ var CommonIgnore = []string{
 	// mac_os
 	".DS_Store",
 	// other
+	".vim",
 	".swp",
 	".tmp",
+	".oh-my-zsh",
 	// svelte
 	".svelte-kit",
 }

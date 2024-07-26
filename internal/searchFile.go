@@ -33,7 +33,7 @@ func searchFile(path, search string, includeMatchTags bool, wg *sync.WaitGroup, 
 
 	b, err := checkFileBinary(path)
 	if err != nil {
-		panic(err)
+		return // don't panic
 	}
 	if b {
 		return
