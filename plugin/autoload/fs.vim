@@ -42,7 +42,11 @@ function! HandleError(channel, msg)
 endfunction
 
 function! HandleExit(job, status)
-    "echo 'job exited with status: ' . a:status
+    " if there are no results, just say that
+    if len(g:search_results) == 0
+        call popup_settext(g:popup_winids['list'], "no results")
+        call popup_settext(g:popup_winids['content'], "No content available")
+    endif
 endfunction
 
 function! StartVssrAsync(pattern)
