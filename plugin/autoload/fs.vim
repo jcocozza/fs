@@ -14,6 +14,11 @@ let g:max_search_results_width = float2nr(g:total_length / 2)
 let g:max_file_viewer_height = g:total_height - 10
 let g:max_file_viewer_width = float2nr(g:total_length / 2)
 
+function! ClearSearch()
+   let g:search_results = []
+   let g:search_loc = []
+endfunction
+
 function! CheckFs()
     if !executable('fs')
         echo "fs not found"
@@ -22,22 +27,8 @@ function! CheckFs()
     return 1
 endfunction
 
-" not used
-function! CallVssr(pattern)
-    let l:command = '/Users/josephcocozza/Repositories/fs/fs --pattern ' . shellescape(a:pattern)
-    echo '\nRunning command: ' . l:command
-    let l:results = systemlist(l:command)
-    if v:shell_error
-        echohl ErrorMsg
-        echom 'Error running fs: ' . v:shell_error
-        echohl None
-        return
-    endif
-    return l:results
-endfunction
-
 function! OnVssrStdout(channel, msg)
-    echo "stdout called " . a:msg
+    " echo 'stdout sent ' . a:msg
     if !empty(a:msg)
         call add(g:search_results, a:msg)
         call popup_settext(g:popup_winids['list'], g:search_results)
@@ -87,19 +78,6 @@ function! OpenFileViewer()
     let g:popup_bufnrs['content'] = winbufnr(g:popup_winids['content'])
 endfunction
 
-function! ParseLine(ln)
-    " should be of the form path/to/file:ln_#: line_text
-    let l:parts = split(a:ln, ':')
-    if len(l:parts) >= 2
-        let l:file = l:parts[0]
-        let l:line = l:parts[1]
-        " let l:file_content = join(readfile(l:file), "\n")
-        let l:file_content = readfile(l:file)
-        return l:file_content
-    endif
-    return ["unable to read file content"]
-endfunction
-
 function! GetFileLine(ln)
     " should be of the form path/to/file:ln_#: line_text
     let l:parts = split(a:ln, ':')
@@ -114,6 +92,8 @@ function! OpenFile(path)
     execute 'edit ' . a:path
 endfunction
 
+" Currently the menu callback serves no purpose
+" everything is handled by the filter function
 function! Sfvc(winid, item)
     " let l:info = g:search_results[g:search_loc]
     " let l:fileline = GetFileLine(info)
@@ -121,6 +101,7 @@ function! Sfvc(winid, item)
     " call OpenFile(filepath)
 endfunction
 
+" just useful things for debugging that don't actually get called anywhere
 function! Ignore()
     echo "Key pressed: " . a:key . " (ASCII: " . printf("%d", char2nr(a:key)) . ")"
 endfunction
@@ -158,8 +139,6 @@ function! ChangeFileContent(winid, key)
             call CenterAroundLine(filepath, line_num)
         endif
     endif
-    " let l:content = ParseLine(info)
-    " call popup_settext(l:content_winid, l:content)
     return l:result
 endfunction
 
@@ -214,7 +193,6 @@ function! Open()
     \ 'callback': 'Sfvc',
     \ }
 
-    " \ 'callback': 'Sfvc',
     " Create the file list popup
     let g:popup_winids['list'] = popup_menu(g:search_results, l:list_options)
     let g:popup_bufnrs['list'] = winbufnr(g:popup_winids['list'])
@@ -235,6 +213,7 @@ endfunction
 function! CloseAll()
    call popup_close(g:popup_winids['content'])
    call popup_close(g:popup_winids['list'])
+   call ClearSearch()
 endfunction
 
 function! fs#Main()
