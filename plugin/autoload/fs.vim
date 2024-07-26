@@ -184,7 +184,7 @@ function! Open()
     \ 'minheight': g:max_search_results,
     \ 'maxwidth': g:max_search_results_width - 10,
     \ 'minwidth': g:max_search_results_width - 10,
-    \ 'title': 'VSSR Files',
+    \ 'title': 'VSSR Files (press ESC to close)',
     \ 'border': [],
     \ 'padding': [0,1,0,1],
     \ 'cursorline': 1,
