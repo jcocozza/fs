@@ -47,7 +47,7 @@ endfunction
 
 function! StartVssrAsync(pattern)
     let l:cmd = ['fs', '--pattern=' . a:pattern, '--path=' . getcwd()]
-    echo 'command: ' . join(l:cmd, ' ')
+    " echo ' command: ' . join(l:cmd, ' ')
     let l:job_id = job_start(l:cmd, {
         \ 'err_cb': function('HandleError'),
         \ 'exit_cb': function('HandleExit'),
@@ -118,6 +118,12 @@ function! ChangeFileContent(winid, key)
         let l:filepath = l:fileline[0]
         call CloseAll()
         call OpenFile(filepath)
+        return
+    endif
+
+    if a:key == "s"
+        call NewSearch()
+        return
     endif
 
     let l:max = len(g:search_results)
@@ -214,6 +220,12 @@ function! CloseAll()
    call popup_close(g:popup_winids['content'])
    call popup_close(g:popup_winids['list'])
    call ClearSearch()
+endfunction
+
+function! NewSearch()
+    call ClearSearch()
+    let l:user_search = input("fs > ")
+    call StartVssrAsync(l:user_search)
 endfunction
 
 function! fs#Main()
