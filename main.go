@@ -8,7 +8,10 @@ import (
 	"github.com/jcocozza/fs/internal"
 )
 
+const version string = "v0.0.1"
+
 func main() {
+	pVersion := flag.Bool("version", false, "show version")
 	pattern := flag.String("pattern", "", "regex search pattern")
 	path := flag.String("path", ".", "the directory to search")
 	versionControl := flag.Bool("version-control", true, "ignore folders like .git/.svn")
@@ -16,6 +19,10 @@ func main() {
 	includeMatchTags := flag.Bool("match-tags", true, "include <match></match> around matched patterns in the result set")
 	common := flag.Bool("common", true, fmt.Sprintf("ignore other commonly ignored folders/files: %v", internal.CommonIgnore))
 	flag.Parse()
+
+	if *pVersion {
+		fmt.Printf("Version: %s\n", version)
+	}
 
 	if *pattern == "" {
 		os.Exit(1)
