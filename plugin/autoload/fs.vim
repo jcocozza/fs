@@ -16,7 +16,7 @@ let g:max_file_viewer_width = float2nr(g:total_length / 2)
 
 function! ClearSearch()
    let g:search_results = []
-   let g:search_loc = []
+   let g:search_loc = 0
 endfunction
 
 function! CheckFs()
