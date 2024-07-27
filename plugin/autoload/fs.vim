@@ -14,9 +14,18 @@ let g:max_search_results_width = float2nr(g:total_length / 2)
 let g:max_file_viewer_height = g:total_height - 10
 let g:max_file_viewer_width = float2nr(g:total_length / 2)
 
+let g:prompt = "fs > "
+let g:search_prompt = g:prompt
+
 function! ClearSearch()
    let g:search_results = []
    let g:search_loc = 0
+endfunction
+
+function! ClearSearchAndPrompt()
+   let g:search_results = []
+   let g:search_loc = 0
+   let g:search_prompt = g:prompt
 endfunction
 
 function! CheckFs()
@@ -51,7 +60,7 @@ endfunction
 
 function! StartVssrAsync(pattern)
     let l:cmd = ['fs', '--pattern=' . a:pattern, '--path=' . getcwd()]
-    " echo ' command: ' . join(l:cmd, ' ')
+    echo ' command: ' . join(l:cmd, ' ')
     let l:job_id = job_start(l:cmd, {
         \ 'err_cb': function('HandleError'),
         \ 'exit_cb': function('HandleExit'),
@@ -111,9 +120,11 @@ function! Ignore()
 endfunction
 
 function! ChangeFileContent(winid, key)
+    let l:result = 0
+    " call SearchBarFilter(a:winid, a:key)
     if a:key == "\<Esc>"
         call CloseAll()
-        return 0
+        return l:result
     endif
 
     if a:key == "\<CR>"
@@ -125,20 +136,16 @@ function! ChangeFileContent(winid, key)
         return
     endif
 
-    if a:key == "s"
-        call NewSearch()
-        return
-    endif
-
     let l:max = len(g:search_results)
-    if (a:key == 'j' || a:key == "\<Down>" || a:key == '<C-N>')
+    if (a:key == "\<Down>" || a:key == '<C-N>')
         let g:search_loc = (g:search_loc + 1) % l:max
+        let l:result = popup_filter_menu(a:winid, a:key)
     endif
-    if (a:key == 'k' || a:key == "\<Up>" || a:key == '<C-P>')
+    if (a:key == "\<Up>" || a:key == '<C-P>')
         let g:search_loc = (g:search_loc - 1) % l:max
+        let l:result = popup_filter_menu(a:winid, a:key)
     endif
 
-    let l:result = popup_filter_menu(a:winid, a:key)
     let l:content_winid = g:popup_winids['content']
     if len(g:search_results) > 0
         let l:info = g:search_results[g:search_loc]
@@ -180,12 +187,52 @@ function! CenterAroundLine(file, line_number)
     call win_execute(l:content_winid, 'setlocal conceallevel=2')
 endfunction
 
+function! SearchBarFilter(winid, key)
+    let l:allowed_search_keys = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                \ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+                \ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                \ '.', '*', '?', '^', '$', '(', ')', '[', ']', '{', '}', '|', '+', '-', '=', '~', '!', '@', '#', '%', '&', "'", '"', '<', '>', ';', ':', ' ']
+
+
+    if a:key == "\<BS>" && len(g:search_prompt) > len(g:prompt)
+        echo g:search_prompt
+        let g:search_prompt = g:search_prompt[:-2]
+        call ClearSearch()
+        call popup_settext(g:popup_winids['search'], g:search_prompt)
+        call StartVssrAsync(g:search_prompt[4:])
+    elseif index(l:allowed_search_keys, a:key) != -1
+        let g:search_prompt = g:search_prompt . a:key
+        call ClearSearch()
+        call popup_settext(g:popup_winids['search'], g:search_prompt)
+        call StartVssrAsync(g:search_prompt[4:])
+    endif
+
+endfunction
+
+function! SearchBar()
+    " Create the popup window for the search bar
+    let l:list_options = {
+    \ 'pos': 'topleft',
+    \ 'line': g:max_search_results + 20,
+    \ 'col': -1,
+    \ 'maxheight': 1,
+    \ 'minheight': 1,
+    \ 'maxwidth': g:max_search_results_width - 10,
+    \ 'minwidth': g:max_search_results_width - 10,
+    \ 'border': [],
+    \ 'padding': [0,1,0,1],
+    \ 'cursorline': 1,
+    \ 'mapping': 0,
+    \ 'filter': 'SearchBarFilter',
+    \ }
+
+    " Create the file list popup
+    let g:popup_winids['search'] = popup_create(g:prompt, l:list_options)
+    let g:popup_bufnrs['search'] = winbufnr(g:popup_winids['search'])
+endfunction
+
 function! Open()
     " Create the popup window for the file list
-    let l:list_width = float2nr(&columns * 0.35)
-    let l:popup_height = float2nr(&lines * 0.8)
-    let l:popup_col = 0  " float2nr((&columns - l:list_width) / 2)
-    let l:popup_row = float2nr((&lines - l:popup_height) / 2)
     let l:list_options = {
     \ 'pos': 'topleft',
     \ 'line': 0,
@@ -213,6 +260,7 @@ function! Open()
     call win_execute(g:popup_winids['list'], 'highlight vssrMatchHidden ctermfg=NONE guifg=NONE')
     call win_execute(g:popup_winids['list'], 'setlocal conceallevel=2')
 
+    call SearchBar()
     call OpenFileViewer()
 
     if len(g:search_results) > 0
@@ -223,13 +271,20 @@ endfunction
 function! CloseAll()
    call popup_close(g:popup_winids['content'])
    call popup_close(g:popup_winids['list'])
+   call popup_close(g:popup_winids['search'])
    call ClearSearch()
 endfunction
 
-function! NewSearch()
-    call ClearSearch()
-    let l:user_search = input("fs > ")
-    call StartVssrAsync(l:user_search)
+function! Lock()
+    let s:saved_modifiable = &modifiable
+    let s:saved_readonly = &readonly
+    setlocal nomodifiable
+    setlocal readonly
+endfunction
+
+function! Unlock()
+    let &modifiable = s:saved_modifiable
+    let &readonly = s:saved_readonly
 endfunction
 
 function! fs#Main()
@@ -238,8 +293,11 @@ function! fs#Main()
         return
     endif
 
-    let l:user_search = input("fs > ")
-    call Open()
-    call StartVssrAsync(l:user_search)
+    try
+        call Lock()
+        call Open()
+    finally
+        call Unlock()
+    endtry
 endfunction
 
