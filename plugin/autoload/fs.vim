@@ -37,7 +37,7 @@ function! CheckFs()
     return 1
 endfunction
 
-function! OnVssrStdout(channel, msg)
+function! OnFsStdout(channel, msg)
     " echo 'stdout sent ' . a:msg
     if !empty(a:msg)
         call add(s:search_results, a:msg)
@@ -59,13 +59,13 @@ function! HandleExit(job, status)
     endif
 endfunction
 
-function! StartVssrAsync(pattern)
+function! StartFsAsync(pattern)
     let l:cmd = ['fs', '--pattern=' . a:pattern, '--path=' . getcwd()]
     echo ' command: ' . join(l:cmd, ' ')
     let s:job_id = job_start(l:cmd, {
         \ 'err_cb': function('HandleError'),
         \ 'exit_cb': function('HandleExit'),
-        \ 'out_cb': function('OnVssrStdout'),
+        \ 'out_cb': function('OnFsStdout'),
         \ })
     " echo 'job status: ' . job_status(l:job_id)
     return s:job_id
@@ -155,7 +155,7 @@ function! FilterKeys(winid, key)
         if s:job_id != v:null && job_status(s:job_id) == "run"
             call job_stop(s:job_id)
         endif
-        let s:job_id = StartVssrAsync(s:search_prompt[len(s:prompt):])
+        let s:job_id = StartFsAsync(s:search_prompt[len(s:prompt):])
     elseif index(l:allowed_search_keys, a:key) != -1
         let s:search_prompt = s:search_prompt . a:key
         call ClearSearch()
@@ -164,7 +164,7 @@ function! FilterKeys(winid, key)
         if s:job_id != v:null && job_status(s:job_id) == "run"
             call job_stop(s:job_id)
         endif
-        let s:job_id = StartVssrAsync(s:search_prompt[len(s:prompt):])
+        let s:job_id = StartFsAsync(s:search_prompt[len(s:prompt):])
         " do nothing
     endif
     let l:content_winid = s:popup_winids['content']
@@ -177,7 +177,7 @@ function! FilterKeys(winid, key)
             call CenterAroundLine(filepath, line_num)
         endif
     endif
-    if a:key != "\<Space>"
+    if a:key != "\<Space>" " popup_filter_menu will close the window if space is pressed. TODO: figure out how to properly consume keys
         let l:result = popup_filter_menu(a:winid, a:key)
     endif
     return l:result
