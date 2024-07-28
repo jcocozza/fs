@@ -12,8 +12,7 @@ Both of these tools are way better then Fs.
 The vim plugin should work out of the box provided the `fs` binary is in your path.
 
 Launch it with `:Fs`.
-You will be prompted to enter the search pattern. After you press `<Enter>`, results will asynchronously populate in the results window.
+You will be prompted to enter the search pattern. Once you start typing, results will be asynchronously loaded.
 To leave the search window press `<esc>`.
-From the search window, you can start a new search with `s`.
 `<Enter>` will drop you into the file that you selected.
-Can use standard vim `j/k`/`<Up>/<Down>` to navigate in the resulting file list.
+Use arrow keys (`<Up>/<Down>`) to navigate in the resulting file list.
