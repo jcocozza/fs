@@ -86,7 +86,6 @@ function! OpenFileViewer()
         \ 'padding': [0,1,0,1],
         \ 'mapping': 0,
         \ }
-
     let l:content = ['No content available']
     " Create the file content popup
     let s:popup_winids['content'] = popup_create(l:content, l:content_options)
@@ -127,7 +126,6 @@ function! FilterKeys(winid, key)
                 \ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
                 \ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                 \ '.', '*', '?', '^', '$', '(', ')', '[', ']', '{', '}', '|', '+', '-', '=', '~', '!', '@', '#', '%', '&', "'", '"', '<', '>', ';', ':', ' ']
-
     if a:key == "\<Esc>"
         call CloseAll()
         return l:result
@@ -140,7 +138,6 @@ function! FilterKeys(winid, key)
         call OpenFile(filepath)
         return
     endif
-
     let l:max = len(s:search_results)
     if (a:key == "\<Down>" || a:key == '<C-N>')
         let s:search_loc = (s:search_loc + 1) % l:max
@@ -149,23 +146,28 @@ function! FilterKeys(winid, key)
     elseif a:key == "\<BS>" && len(s:search_prompt) > len(s:prompt)
         echo s:search_prompt
         let s:search_prompt = s:search_prompt[:-2]
+        if s:job_id != v:null && job_status(s:job_id) == "run"
+            call job_stop(s:job_id)
+            while job_status(s:job_id) == "dead"
+                " just keep in holding until job is finished
+            endwhile
+        endif
         call ClearSearch()
         call popup_settext(s:popup_winids['search'], s:search_prompt)
         call popup_settext(s:popup_winids['list'], "")
-        if s:job_id != v:null && job_status(s:job_id) == "run"
-            call job_stop(s:job_id)
-        endif
         let s:job_id = StartFsAsync(s:search_prompt[len(s:prompt):])
     elseif index(l:allowed_search_keys, a:key) != -1
         let s:search_prompt = s:search_prompt . a:key
+        if s:job_id != v:null && job_status(s:job_id) == "run"
+            call job_stop(s:job_id)
+            while job_status(s:job_id) == "dead"
+                " just keep in holding until job is finished
+            endwhile
+        endif
         call ClearSearch()
         call popup_settext(s:popup_winids['search'], s:search_prompt)
         call popup_settext(s:popup_winids['list'], "")
-        if s:job_id != v:null && job_status(s:job_id) == "run"
-            call job_stop(s:job_id)
-        endif
         let s:job_id = StartFsAsync(s:search_prompt[len(s:prompt):])
-        " do nothing
     endif
     let l:content_winid = s:popup_winids['content']
     if len(s:search_results) > 0
@@ -204,10 +206,11 @@ function! CenterAroundLine(file, line_number)
         endif
     endfor
     let l:content_winid = s:popup_winids['content']
+    call popup_setoptions(l:content_winid, {'title': a:file . " | ln: " . a:line_number})
     call popup_settext(l:content_winid, l:highlighted_content)
-    call win_execute(l:content_winid, 'syntax region vssrMatch matchgroup=vssrMatchHidden start="<match>" end="</match>" concealends')
-    call win_execute(l:content_winid, 'highlight vssrMatch ctermfg=Red guifg=Red')
-    call win_execute(l:content_winid, 'highlight vssrMatchHidden ctermfg=NONE guifg=NONE')
+    call win_execute(l:content_winid, 'syntax region FsMatch matchgroup=FsMatchHidden start="<match>" end="</match>" concealends')
+    call win_execute(l:content_winid, 'highlight FsMatch ctermfg=Red guifg=Red')
+    call win_execute(l:content_winid, 'highlight FsMatchHidden ctermfg=NONE guifg=NONE')
     call win_execute(l:content_winid, 'setlocal conceallevel=2')
 endfunction
 
@@ -221,6 +224,7 @@ function! SearchBar()
     \ 'minheight': 1,
     \ 'maxwidth': s:max_search_results_width - 10,
     \ 'minwidth': s:max_search_results_width - 10,
+    \ 'title': 'Search',
     \ 'border': [],
     \ 'padding': [0,1,0,1],
     \ 'cursorline': 1,
@@ -242,7 +246,7 @@ function! Open()
     \ 'minheight': s:max_search_results,
     \ 'maxwidth': s:max_search_results_width - 10,
     \ 'minwidth': s:max_search_results_width - 10,
-    \ 'title': 'VSSR Files (press ESC to close)',
+    \ 'title': 'Fs Files (press ESC to close)',
     \ 'border': [],
     \ 'padding': [0,1,0,1],
     \ 'cursorline': 1,
@@ -256,9 +260,9 @@ function! Open()
     let s:popup_bufnrs['list'] = winbufnr(s:popup_winids['list'])
 
     " Set up syntax highlighting for matches in the list popup
-    call win_execute(s:popup_winids['list'], 'syntax region vssrMatch matchgroup=vssrMatchHidden start="<match>" end="</match>" concealends')
-    call win_execute(s:popup_winids['list'], 'highlight vssrMatch ctermfg=Red guifg=Red')
-    call win_execute(s:popup_winids['list'], 'highlight vssrMatchHidden ctermfg=NONE guifg=NONE')
+    call win_execute(s:popup_winids['list'], 'syntax region FsMatch matchgroup=FsMatchHidden start="<match>" end="</match>" concealends')
+    call win_execute(s:popup_winids['list'], 'highlight FsMatch ctermfg=Red guifg=Red')
+    call win_execute(s:popup_winids['list'], 'highlight FsMatchHidden ctermfg=NONE guifg=NONE')
     call win_execute(s:popup_winids['list'], 'setlocal conceallevel=2')
 
     call SearchBar()

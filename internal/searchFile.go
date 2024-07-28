@@ -79,6 +79,7 @@ func Searcher(searchDir, search string, cfg SearchConfig) int {
 	}
 	var wg sync.WaitGroup
 	results := make(chan string)
+	defer close(results)
 
 	go func() {
 		for result := range results {
@@ -109,7 +110,6 @@ func Searcher(searchDir, search string, cfg SearchConfig) int {
 	})
 
 	wg.Wait()
-	close(results)
 	return fileCnt
 	//fmt.Printf("total files searched: %d\n", fileCnt)
 }
