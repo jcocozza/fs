@@ -147,6 +147,9 @@ function! FilterKeys(winid, key)
         echo s:search_prompt
         let s:search_prompt = s:search_prompt[:-2]
         if s:job_id != v:null && job_status(s:job_id) == "run"
+            " explicitly closing the channel for the job ensures that nothing
+            " new gets sent to the result set
+            call ch_close(s:job_id)
             call job_stop(s:job_id)
             while job_status(s:job_id) == "dead"
                 " just keep in holding until job is finished
@@ -159,6 +162,9 @@ function! FilterKeys(winid, key)
     elseif index(l:allowed_search_keys, a:key) != -1
         let s:search_prompt = s:search_prompt . a:key
         if s:job_id != v:null && job_status(s:job_id) == "run"
+            " explicitly closing the channel for the job ensures that nothing
+            " new gets sent to the result set
+            call ch_close(s:job_id)
             call job_stop(s:job_id)
             while job_status(s:job_id) == "dead"
                 " just keep in holding until job is finished
