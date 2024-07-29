@@ -19,8 +19,9 @@ let s:search_prompt = s:prompt
 let s:job_id = v:null
 
 function! ClearSearch()
-   let s:search_results = []
-   let s:search_loc = 0
+    let s:search_results = []
+    let s:search_loc = 0
+    call popup_setoptions(s:popup_winids['content'], {'title': "file content will populate here"})
 endfunction
 
 function! ClearSearchAndPrompt()
@@ -102,8 +103,8 @@ function! GetFileLine(ln)
     endif
 endfunction
 
-function! OpenFile(path)
-    execute 'edit ' . a:path
+function! OpenFile(path, line)
+    execute 'edit +' . a:line . ' ' . a:path
 endfunction
 
 " Currently the menu callback serves no purpose
@@ -132,10 +133,11 @@ function! FilterKeys(winid, key)
     endif
     if a:key == "\<CR>"
         let l:info = s:search_results[s:search_loc]
-        let l:fileline = GetFileLine(info)
+        let l:fileline = GetFileLine(l:info)
         let l:filepath = l:fileline[0]
+        let l:line_num = l:fileline[1]
         call CloseAll()
-        call OpenFile(filepath)
+        call OpenFile(l:filepath, l:line_num)
         return
     endif
     let l:max = len(s:search_results)
