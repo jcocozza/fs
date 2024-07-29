@@ -93,7 +93,7 @@ func Searcher(searchDir, search string, cfg SearchConfig) int {
 
 		if !info.IsDir() {
 			if ig.Isin(path) {
-				return nil
+				return filepath.SkipDir
 			}
 			wg.Add(1)
 			go searchFile(path, search, cfg.IncludeMatchTags, &wg, results)

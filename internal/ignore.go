@@ -40,6 +40,8 @@ var CommonIgnore = []string{
 type IgnoreFiles []string
 
 // check if a string matches any of the ignore patterns
+//
+// will ignore all malformed patterns
 func (f IgnoreFiles) Isin(pattern string) bool {
 	for _, exp := range f {
 		matched, err := filepath.Match(exp, pattern)
@@ -75,7 +77,7 @@ func readIgnoreFile(path string) ([]string, error) {
 		if strings.TrimSpace(line) == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		patterns = append(patterns, line)
+		patterns = append(patterns, strings.TrimSpace(line))
 	}
 	return patterns, nil
 }
