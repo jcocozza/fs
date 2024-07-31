@@ -8,6 +8,17 @@ The basic design was inspired by [fzf.vim](https://github.com/junegunn/fzf.vim)
 
 Both of these tools are way better then Fs.
 
+## Install
+
+The binary is located in [releases](https://github.com/jcocozza/fs/releases).
+
+For use in vim you can just use vim's built in plugin manager.
+```bash
+cd ~/.vim/pack/git-plugins/start
+git clone https://github.com/jcocozza/fs.git
+```
+The `fs` binary needs to be in your path to use the vim plugin.
+
 ## Searching in Vim
 The vim plugin should work out of the box provided the `fs` binary is in your path.
 
