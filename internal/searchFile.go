@@ -73,12 +73,10 @@ func searchFile(path, search string, includeMatchTags bool, wg *sync.WaitGroup, 
 }
 
 func Searcher(searchDir, search string, cfg SearchConfig) int {
-	ig, err := ReadIgnoreFiles(searchDir, cfg.VersionControl, cfg.VersionControlIgnore, cfg.Common)
-	if err != nil {
-		panic(err)
-	}
+	ig := ReadIgnoreFiles(searchDir, cfg.VersionControl, cfg.VersionControlIgnore, cfg.Common)
 	var wg sync.WaitGroup
 	results := make(chan string)
+	defer close(results)
 
 	go func() {
 		for result := range results {
@@ -95,7 +93,7 @@ func Searcher(searchDir, search string, cfg SearchConfig) int {
 
 		if !info.IsDir() {
 			if ig.Isin(path) {
-				return nil
+				return filepath.SkipDir
 			}
 			wg.Add(1)
 			go searchFile(path, search, cfg.IncludeMatchTags, &wg, results)
@@ -109,7 +107,6 @@ func Searcher(searchDir, search string, cfg SearchConfig) int {
 	})
 
 	wg.Wait()
-	close(results)
 	return fileCnt
 	//fmt.Printf("total files searched: %d\n", fileCnt)
 }
